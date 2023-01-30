@@ -1,0 +1,359 @@
+#include "BSTSet.h"
+#include <iostream>
+#include <vector>
+#include "ArrayStack.h"
+using namespace std;
+
+BSTSet::BSTSet()
+{
+	// TODO
+	root = NULL;
+}
+
+BSTSet::BSTSet(const std::vector<int>& input)
+{
+	// TODO, change following code after completing this function
+	root = NULL; //what about empty vector
+	for (unsigned int i=0; i<input.size(); i++) {
+		add(input[i]);
+	}
+}
+
+void BSTSet::postOrderDelete(TNode* subroot) { //I added
+    if (subroot != NULL) {
+        postOrderDelete(subroot->left);
+        postOrderDelete(subroot->right);
+        delete subroot;
+    }
+}
+
+BSTSet::~BSTSet()
+{
+	// TODO
+	postOrderDelete(root);
+
+}
+
+bool BSTSet::isInHelper(int v) const {
+/*
+Time complexity: avg would be logn (because it is a BST and each conditional divides options by 2)
+Space complexity: constant because not recursive, and only creates a TNode*
+ */
+	TNode* curr = root;
+
+	while (curr) { //will exit if reached a NULL node
+
+    	if (v < curr->element) { //left means less than element
+			curr = curr->left;
+    	}
+		else if (v > curr->element) { //right means greater than element
+
+			curr = curr->right;
+    	}
+    	else { //hit the element (only time returns true)
+    	    return true;
+    	}
+	}
+
+    return false;
+}
+
+bool BSTSet::isIn(int v)
+/*
+Time complexity: based on isInHelper --> avg would be logn (because it is a BST and each conditional divides options by 2)
+Space complexity: based on isInHelper --> constant because not recursive, and only creates a TNode*
+ */
+{
+	// TODO
+	return isInHelper(v);
+}
+
+
+void BSTSet::add(int v)
+/*
+Time complexity: avg would be logn (because it is a BST and each conditional divides options by 2)
+--> only difference between add and find is inserting the node itself
+Space complexity: constant because not recursive, and only creates 1-2 TNode*
+ */
+{
+	// TODO
+	//slower if you loop through search first
+	if (root==NULL) {
+		root = new TNode(v, NULL, NULL);
+		return;
+	}
+
+	TNode* curr = root;
+
+	while (curr) {
+		if (v < curr->element) {
+			if (curr->left!=NULL) {
+				curr = curr->left;
+			}
+			else { //if it is NULL, insert there
+				curr->left = new TNode(v, NULL, NULL);
+				return;
+			}
+		}
+
+		else if (v > curr->element) {
+			if (curr->right!=NULL) {
+				curr = curr->right;
+			}
+			else { //if it is NULL, insert there
+				curr->right = new TNode (v, NULL, NULL);
+				return;
+			}
+		}
+
+		else { //v==curr->element
+			return;
+		}
+	}
+}
+
+TNode* BSTSet::findMin(TNode* subroot) {
+/*
+Time complexity: avg would be logn (because it is a BST and each left iter divides options by 2), WC n (all left)
+--> only difference between add and find is inserting the node itself
+Space complexity: constant because not recursive, and only creates 1 TNode*
+ */
+	TNode* curr = subroot;
+	while (curr->left!=NULL) {
+		curr=curr->left;
+	}
+	return curr;
+}
+
+void BSTSet::removeHelper(int v, TNode*& subroot) {
+/*
+Time complexity: avg would be logn to get to the node with element v, and then calling findMin in the 4th conditional
+would mean multiplication by logn due to findMin --> either logn or square of logn
+Space complexity: constant because not recursive, and only creates 1 TNode* in the else statement
+ */
+
+    if (subroot == NULL) {
+    	return;
+    }
+	if (v < subroot->element) {
+        removeHelper(v, subroot->left);
+    }
+    else if (v > subroot->element) {
+        removeHelper(v, subroot->right);
+    }
+    else if (subroot->left!=NULL && subroot->right!=NULL) { //node has children
+        subroot -> element = findMin(subroot->right)->element; //change the element of the current node to that of the minimum
+        //of the right nodes in order to still satisfy BST conditions (left max would have worked as well)
+        removeHelper(subroot->element, subroot->right); //remove the node with the element that you "moved"
+    }
+    else {
+    	TNode* toDelete = subroot;
+    	subroot = (subroot->left != NULL) ? subroot->left : subroot->right;
+        delete toDelete; // does this reflect outside of function?
+    }
+}
+
+bool BSTSet::remove(int v) //removing one node
+/*
+Time complexity: avg would be logn
+--> logn if v is not in BST
+--> (avg probably) logn if v is in the BST
+--> logn if node containing v has children (findMin is called within removeHelper but results in 2logn not logn squared)
+Space complexity: constant because not recursive, and only creates 1-2 TNode*
+ */
+{
+	// TODO
+	if (isIn(v)==true) {
+		removeHelper(v, root);
+		return true;
+	}
+	else {
+		return false;
+	}
+
+
+}
+
+void BSTSet::inOrderUnite(TNode* subroot) { //I added
+/*
+Time complexity: 2TinorderUnite(n) + Tadd(n)
+--> n because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+    if (subroot!=NULL) {
+        inOrderUnite(subroot->left);
+        add(subroot->element); //"visit" is adding that element (handles if it is already in)
+        inOrderUnite(subroot->right);
+    }
+}
+
+void BSTSet::Union(const BSTSet& s)
+/*
+Time complexity: 2TinorderUnite(n) + Tadd(n)
+--> n (in terms of s) because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+{
+	// TODO
+	inOrderUnite(s.root);
+}
+
+void BSTSet::postOrderIntersect(TNode* subroot, const BSTSet& toTraverse) {
+/*
+Time complexity: 2TinorderUnite(n) + TisIn(n) + Tremove(n)
+--> n because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+    if (subroot!=NULL) {
+        postOrderIntersect(subroot->left, toTraverse);
+		postOrderIntersect(subroot->right, toTraverse);
+        if (toTraverse.isInHelper(subroot->element)==false) { //logn
+        	remove(subroot->element); //logn
+        }
+    }
+}
+
+//cannot call non-const with const variable
+void BSTSet::intersection(const BSTSet& s)
+/*
+Time complexity: 2TinorderUnite(n) + TisIn(n) + Tremove(n)
+--> n (based on this) because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+{
+	// TODO
+	postOrderIntersect(root, s);
+
+}
+
+void BSTSet::postOrderDifference(TNode* subroot, const BSTSet& toTraverse) {
+/*
+Time complexity: 2postOrderDifference(n) + TisIn(n) + Tremove(n)
+--> n (based on this) because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+    if (subroot!=NULL) {
+    	postOrderDifference(subroot->left, toTraverse);
+    	postOrderDifference(subroot->right, toTraverse);
+        if (toTraverse.isInHelper(subroot->element)==true) {
+        	remove(subroot->element);
+        }
+    }
+}
+
+void BSTSet::difference(const BSTSet& s)
+/*
+Time complexity: 2postOrderDifference(n) + TisIn(n) + Tremove(n)
+--> n (based on this) because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+{
+	// TODO
+	postOrderDifference(root, s);
+}
+
+int numEle(TNode* subroot) { //I added
+/*
+Time complexity: n because traversing in order is n (hits each node)
+Space complexity: constant because creates 0 TNode*
+ */
+    if(subroot) {
+        return numEle(subroot->left) + numEle(subroot->right) + 1;
+    }
+    return 0;
+}
+
+int BSTSet::size()
+/*
+Time complexity: n because traversing in order is n (hits each node)
+Space complexity: constant because creates 0 TNode*
+ */
+{
+	// TODO
+	return numEle(root); //includes the root; returns number of nodes
+}
+
+int BSTHeight(TNode* subroot) { //I added
+/*
+Time complexity: n because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+    if (subroot == NULL) { //base case
+        return 0;
+    }
+    else {
+        // Find the height of left subtree
+        int LHeight = BSTHeight(subroot->left);
+        // Find the height of right subtree
+        int RHeight = BSTHeight(subroot->right);
+
+        // Find max + 1 to get the height of tree
+        if (LHeight>RHeight) {
+            return LHeight+1; //increase for each hit node
+        }
+        else {
+            return RHeight+1;
+        }
+    }
+}
+
+int BSTSet::height()
+/*
+Time complexity: n because traversing in order is n (hits each node)
+Space complexity: constant because not recursive, and creates 0 TNode*
+ */
+{
+	// TODO
+	return BSTHeight(root)-1; //-1 because don't include root (depth 0)
+}
+
+// create and use class MyStack
+
+void BSTSet::printNonRec() //in order L C R
+/*
+Time complexity: n because traversing in order is n (hits each node)
+Space complexity: average case is constant because not recursive and creates a constant capacity array of TNode*
+ */
+{
+	// TODO
+
+	if (root==NULL) {
+		return;
+	}
+
+	ArrayStack<TNode*> printer;
+	TNode* curr = root; //creating reference
+
+	while (curr!=NULL || printer.isEmpty()==false) { //|| curr!=NULL
+		while (curr) { //STEP 2 and 3
+			printer.push(curr);
+			curr=curr->left;
+		}
+		//curr is null
+		curr=printer.top(); //top of stack was last pushed element before null
+		cout<<(printer.pop()->element)<<","; //STEP 4 (pop last pushed)
+		curr=curr->right; //go to right child and repeat while loop
+	}
+	return;
+}
+
+// Do not modify following provided methods
+
+
+void BSTSet::printBSTSet()
+{
+    if (root == NULL)
+        std::cout << "";
+    else {
+        printBSTSet(root);
+    }
+}
+
+void BSTSet::printBSTSet(TNode* t)
+{
+    if (t != NULL) {
+        printBSTSet(t->left);
+        std::cout << t->element << ",";
+        printBSTSet(t->right);
+    }
+}
